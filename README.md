@@ -34,13 +34,24 @@ Also, I wanted something to try out Selenium on.
   ```
     *The `Course name` value should be the name exactly as it is in iClicker*
     
-    *Except for `Account name`, no key names should be adjusted*
+    *Except for `Account name` and individual course keys, no key names should be adjusted*
 
 # Usage
 
-Run the script. You should be prompted for an account name, which should be the `Account name` in the `config.json` (e.g., "Account name" as it is in the above example).
+Import `iClicker_driver` into your code using
+  ```python
+  from iClicker_driver import iClicker_driver
+  ```
 
-As long as the `config.json` file is set up correctly, it do everything else automatically.
+Then create an iClicker_driver object. Optional arguments include
+* `config_file` - The filename of the *.json* which contains all the account and course information. Default is `config.json`
+* `auto_wait` - A boolean that defines whether the object should automatically wait for the meeting to start upon entering a course. Default is `True`
+
+Call `start()` to set up the WebDriver and log-in. You should be prompted for an account name, which should be the `Account name` in the *.json* config file (e.g., "Account name" as it is in the above example).
+
+Call `navigate_to_course(course_name)` to move the webpage to a specific course.
+- `course_name` is the key for the course in the *.json* config file (e.g., "1" and "2" in the above example file)
+- If `auto_wait` is set to False, you need to manually call `start_wait` to have the driver wait for the meeting to start.
 
 # To-do
 

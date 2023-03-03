@@ -60,7 +60,10 @@ class iClicker_driver:
                                                f'\'{self.config[self.account_name]["Course"][course]}\']]'))).click()
         del self.driver.requests
         if self.auto_wait:
-            self.wait_thread.start()
+            self.start_wait()
+
+    def start_wait(self):
+        self.wait_thread.start()
 
     def wait_for_meeting(self):
         while True:

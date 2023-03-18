@@ -26,12 +26,12 @@ Also, I wanted something to try out Selenium on.
       "Password": "mypassword123",
       "Courses":
         {
-        "1": 
+        "Course 1 name": 
         {
           "Name": "Course 1 name",
           "Time": "21:30"
         },
-        "2": 
+        "Course 2 name": 
         {
           "Name": "Course 2 name",
           "Time": "8:30"

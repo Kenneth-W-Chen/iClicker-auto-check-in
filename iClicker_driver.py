@@ -79,7 +79,7 @@ class iClicker_driver:
         WebDriverWait(self.driver, 20).until(ec.element_to_be_clickable((By.ID, 'sign-in-button'))).click()
         self.wait_for_ajax()
         self.driver.implicitly_wait(5)
-
+        self.navigate_to_course(self.course_schedule[self.currentCourseIndex].course)
         self.time_thread.start()
 
     def navigate_to_course(self, course: str):
@@ -89,7 +89,7 @@ class iClicker_driver:
         WebDriverWait(self.driver, 20) \
             .until(ec.element_to_be_clickable((By.XPATH,
                                                f'/html/body/div/div/div/div/div/main/div/ul/li/a[label[text() = '
-                                               f'\'{self.config[self.account_name]["Course"][course]}\']]'))).click()
+                                               f'\'{course}\']]'))).click()
         self.currentCourse = course
         del self.driver.requests
         if self.auto_wait:
@@ -167,7 +167,7 @@ class iClicker_driver:
 
     def set_up_courses(self):
         for key, value in self.config[self.account_name]['Courses'].items():
-            self.course_schedule.append(course_info(hour_minute.from_str(value['Start time']), value['Name']))
+            self.course_schedule.append(course_info(hour_minute.from_str(value['Time']), value['Name']))
         self.course_schedule.sort()
         now = hour_minute.utcnow()
         for i in range(len(self.course_schedule)):
@@ -177,4 +177,4 @@ class iClicker_driver:
         if self.nextCourseIndex == 0:
             self.currentCourseIndex = len(
                 self.course_schedule) - 1  # Todo: I can't really run this in my head but I think this works
-            print('a')
+        print('Courses set up')

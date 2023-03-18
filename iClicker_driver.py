@@ -53,16 +53,19 @@ class iClicker_driver:
 
         self.time_thread: Thread = Thread(name='CheckTime', target=self.wait_for_time)
 
-        self.time_lock: Lock = Lock() # Thread lock
+        self.time_lock: Lock = Lock()  # Thread lock
 
         self.joinEvent: Event = Event()
+        self.joinThreadIsWaitingEvent: Event = Event()
+        self.joinThreadIsWaiting: bool = False
         self.restartEvent: Event = Event()
+        self.restartFlag: bool = False
         self.currentCourse: str = ''
 
-    def start(self):
+    def start(self, account_name: Union[str, None] = None):
         try:
             if not self.account_name:
-                self.get_account()
+                self.get_account(account_name)
         except ValueError:
             print("Couldn't find email or password in config file. Not starting...")
         self.set_up_courses()
@@ -101,51 +104,100 @@ class iClicker_driver:
 
     def wait_for_meeting(self):
         while True:
+            print('Waiting for meeting...')
             while True:
+                print('Waiting for join event...')
                 self.joinEvent.wait()
                 self.time_lock.acquire()
                 if self.joinUp:
                     break
+                print('Spurious wake-up. Ignoring...')
                 self.time_lock.release()
             self.joinEvent.clear()
+            print('Join is up! Waiting for AJAX to load...')
+            self.driver.implicitly_wait(3)
             self.wait_for_ajax()
             WebDriverWait(self.driver, 20).until(ec.element_to_be_clickable((By.ID, self.JOIN_BTN_ID))).click()
             # three-dot-loader
-            WebDriverWait(self.driver, 20).until(ec.invisibility_of_element((By.ID, 'three-dot-loader')))
+            WebDriverWait(self.driver, 20).until(ec.invisibility_of_element((By.ID, 'three-dot-loader')))   # What is this for?
+            print('Clicked button and stuff...')
+            self.joinThreadIsWaiting = True
+            self.joinThreadIsWaitingEvent.set()
             self.time_lock.release()
+            print('Released time_lock. Waiting for restart flag...')
             # todo: add wait for event to restart
-            self.restartEvent.wait()
+            while True:
+                self.restartEvent.wait()
+                self.time_lock.acquire()
+                if self.restartFlag:
+                    break
+                self.time_lock.release()
+            self.restartFlag = False
+            self.time_lock.release()
+            print('Restart flag raised. wait_for_meeting is restarting...')
 
     def wait_for_time(self):
         if len(self.course_schedule) <= 1:
+            print('Only one course in list found. Ignoring time scheduling...')
+            while True:
+                print('Waiting for join thread to need to restart...')
+                while True:
+                    self.joinThreadIsWaitingEvent.wait()
+                    self.time_lock.acquire()
+                    if self.joinThreadIsWaiting:
+                        break
+                    self.time_lock.release()
+                print('Restarting join button thread...')
+                self.restartFlag = True
+                self.restartEvent.set()
+                self.joinThreadIsWaiting = False
+                self.time_lock.release()
+                print('Join button thread restarted from wait_for_time!')
             return
-        nextCourseTime = self.course_schedule[self.nextCourseIndex].ht
+        next_course_time = self.course_schedule[self.nextCourseIndex].ht
         while True:
             now = hour_minute.utcnow()
-            if now >= nextCourseTime:
+            if now >= next_course_time:
+                print("Time change! Now is %s, and next course time is %s", now, next_course_time)
+                print('Trying to acquire time_lock to switch courses')
                 self.time_lock.acquire()
                 if self.driver.current_url != self.COURSES_URL:
                     if self.driver.current_url == self.LOG_IN_URL:
+                        print('Driver was in log-in URL. Logging in...')
                         self.log_in()
                     else:
+                        print('Switching to courses URL...')
                         self.driver.get(self.COURSES_URL)
+                print('Waiting for webpage to load')
+                self.wait_for_ajax()
+                self.driver.implicitly_wait(5)
+                self.wait_for_ajax()
+                print("Done waiting. Navigating to course of %s", self.course_schedule[self.nextCourseIndex].course)
                 self.navigate_to_course(self.course_schedule[self.nextCourseIndex].course)
+                print("Done navigating. Resetting events")
                 self.joinUp = False
                 self.joinEvent.clear()
+                self.restartFlag = True
                 self.restartEvent.set()
                 self.currentCourseIndex = self.nextCourseIndex
-                if self.nextCourseIndex == len(self.course_schedule) -1:
+                if self.nextCourseIndex == len(self.course_schedule) - 1:
                     self.nextCourseIndex = 0
                 else:
                     self.nextCourseIndex += 1
-                nextCourseTime = self.course_schedule[self.nextCourseIndex].ht
+                next_course_time = self.course_schedule[self.nextCourseIndex].ht
+                print("Next course switch to occur at %s", next_course_time)
+                print("Releasing time_lock")
+                self.time_lock.release()
 
     def wait_for_url_change(self):  # Todo
         while True:
             self.urlCheckEvent.wait()
 
-    def get_account(self):
-        self.account_name = input('Enter the account name to use (i.e., the account name in config.json)')
+    def get_account(self, name: Union[str, None] = None):
+        if name is None:
+            self.account_name = input('Enter the account name to use (i.e., the account name in config.json)')
+        else:
+            self.account_name = name
         if self.account_name not in self.config or 'Email' not in self.config[self.account_name] or 'Password' not in \
                 self.config[self.account_name]:
             raise ValueError("Could not find email or password in config file.")
@@ -163,7 +215,7 @@ class iClicker_driver:
             elif body[63:67] != 'null':
                 self.joinUp = True
                 self.joinEvent.set()
-        # Todo: need to figure out if iClicker automatically logs out at some point
+        # Todo: iClicker doesn't auto log-out for at least 1 day. Idk if it'll do further than that though
 
     def set_up_courses(self):
         for key, value in self.config[self.account_name]['Courses'].items():
@@ -176,5 +228,5 @@ class iClicker_driver:
                 break
         if self.nextCourseIndex == 0:
             self.currentCourseIndex = len(
-                self.course_schedule) - 1  # Todo: I can't really run this in my head but I think this works
+                self.course_schedule) - 1
         print('Courses set up')

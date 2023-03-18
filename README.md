@@ -29,12 +29,14 @@ Also, I wanted something to try out Selenium on.
         "Course 1 name": 
         {
           "Name": "Course 1 name",
-          "Time": "21:30"
+          "Start Time": "21:30",
+          "End Time": "22:50"
         },
         "Course 2 name": 
         {
           "Name": "Course 2 name",
-          "Time": "8:30"
+          "Start Time": "8:30",
+          "End Time": "11:20"
         }
         }
     }
@@ -45,6 +47,8 @@ Also, I wanted something to try out Selenium on.
     *Except for `Account name` and individual course keys, no key names should be adjusted*
     
     *The times should be in 24-hour format and based off of UTC time*
+
+    *Do not make End Time overlap with another Start Time (e.g., Course 1 has End Time of 22:50 and Course 2 has Start Time of 22:50)* 
 
 # Usage
 

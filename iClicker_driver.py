@@ -157,9 +157,16 @@ class iClicker_driver:
                 print('Join button thread restarted from wait_for_time!')
             return
         next_course_time = self.course_schedule[self.nextCourseIndex].start_time
+        wait_for_next_day: bool = False
+        current_day: int = datetime.now().weekday()
         while True:
+            if wait_for_next_day:
+                print(f"Need to wait for next day for course {self.currentCourseIndex}")
+                while current_day == datetime.now().weekday():
+                    time.sleep(1)
+                wait_for_next_day = False
             now = hour_minute.utcnow()
-            if now >= next_course_time and now >= self.course_schedule[self.currentCourseIndex].end_time:
+            if now >= next_course_time : # and now >= self.course_schedule[self.currentCourseIndex].end_time
                 print("Time change! Now is %s, and next course time is %s", now, next_course_time)
                 print('Trying to acquire time_lock to switch courses')
                 self.time_lock.acquire()
@@ -183,15 +190,21 @@ class iClicker_driver:
                 self.joinEvent.clear()
                 self.restartFlag = True
                 self.restartEvent.set()
+
+                # Setting up next course switch
                 self.currentCourseIndex = self.nextCourseIndex
-                if self.nextCourseIndex == len(self.course_schedule) - 1:
+                if self.nextCourseIndex == len(self.course_schedule) - 1:   # Loop the next course
                     self.nextCourseIndex = 0
+                    wait_for_next_day = True    # Need to set this because [0] < [current] and likely < now
+                    print('Wait for next day set')
                 else:
                     self.nextCourseIndex += 1
                 next_course_time = self.course_schedule[self.nextCourseIndex].start_time
                 print("Next course switch to occur at %s", next_course_time)
                 print("Releasing time_lock")
                 self.time_lock.release()
+            else:
+                time.sleep(.5)
 
     def wait_for_url_change(self):  # Todo
         while True:

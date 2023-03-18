@@ -87,6 +87,7 @@ class iClicker_driver:
 
     def navigate_to_course(self, course: str):
         self.time_lock.acquire()
+        print("Navigating to course %s", course)
         # This XPath searches for the course button by the text contained within.
         # Unfortunately the buttons don't have descriptive IDs, so we have to use XPath
         WebDriverWait(self.driver, 20) \
@@ -100,7 +101,8 @@ class iClicker_driver:
         self.time_lock.release()
 
     def start_wait(self):
-        self.wait_thread.start()
+        if not self.wait_thread.is_alive():
+            self.wait_thread.start()
 
     def wait_for_meeting(self):
         while True:
@@ -173,7 +175,9 @@ class iClicker_driver:
                 self.driver.implicitly_wait(5)
                 self.wait_for_ajax()
                 print("Done waiting. Navigating to course of %s", self.course_schedule[self.nextCourseIndex].course)
+                self.time_lock.release()
                 self.navigate_to_course(self.course_schedule[self.nextCourseIndex].course)
+                self.time_lock.acquire()
                 print("Done navigating. Resetting events")
                 self.joinUp = False
                 self.joinEvent.clear()
@@ -222,11 +226,13 @@ class iClicker_driver:
             self.course_schedule.append(course_info(hour_minute.from_str(value['Time']), value['Name']))
         self.course_schedule.sort()
         now = hour_minute.utcnow()
+        self.nextCourseIndex = len(self.course_schedule)-1
         for i in range(len(self.course_schedule)):
             if now <= self.course_schedule[i]:
                 self.nextCourseIndex = i
                 break
         if self.nextCourseIndex == 0:
-            self.currentCourseIndex = len(
-                self.course_schedule) - 1
+            self.currentCourseIndex = len(self.course_schedule) - 1
+        else:
+            self.currentCourseIndex = self.nextCourseIndex - 1
         print('Courses set up')

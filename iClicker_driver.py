@@ -156,10 +156,10 @@ class iClicker_driver:
                 self.time_lock.release()
                 print('Join button thread restarted from wait_for_time!')
             return
-        next_course_time = self.course_schedule[self.nextCourseIndex].ht
+        next_course_time = self.course_schedule[self.nextCourseIndex].start_time
         while True:
             now = hour_minute.utcnow()
-            if now >= next_course_time:
+            if now >= next_course_time and now >= self.course_schedule[self.currentCourseIndex].end_time:
                 print("Time change! Now is %s, and next course time is %s", now, next_course_time)
                 print('Trying to acquire time_lock to switch courses')
                 self.time_lock.acquire()
@@ -188,7 +188,7 @@ class iClicker_driver:
                     self.nextCourseIndex = 0
                 else:
                     self.nextCourseIndex += 1
-                next_course_time = self.course_schedule[self.nextCourseIndex].ht
+                next_course_time = self.course_schedule[self.nextCourseIndex].start_time
                 print("Next course switch to occur at %s", next_course_time)
                 print("Releasing time_lock")
                 self.time_lock.release()
@@ -223,7 +223,8 @@ class iClicker_driver:
 
     def set_up_courses(self):
         for key, value in self.config[self.account_name]['Courses'].items():
-            self.course_schedule.append(course_info(hour_minute.from_str(value['Time']), value['Name']))
+            self.course_schedule.append(course_info(hour_minute.from_str(value['Start Time']),
+                                                    hour_minute.from_str(value['End Time']), value['Name']))
         self.course_schedule.sort()
         now = hour_minute.utcnow()
         self.nextCourseIndex = len(self.course_schedule)-1

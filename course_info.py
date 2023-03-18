@@ -27,6 +27,9 @@ class hour_minute:
     def toSeconds(self):
         return (60 * self.hour + self.minute) * 60
 
+    def __str__(self):
+        return f'{self.hour}:{self.minute}'
+
     def __eq__(self, other):
         if isinstance(other, self.__class__):
             return self.hour == other.hour and self.minute == other.hour

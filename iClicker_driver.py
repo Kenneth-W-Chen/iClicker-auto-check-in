@@ -161,9 +161,9 @@ class iClicker_driver:
         current_day: int
         while True:
             if wait_for_next_day:
-                print(f"Need to wait for next day for course {self.currentCourseIndex}")
-                while current_day == datetime.now().weekday():
-                    time.sleep(1)
+                print(f"Need to wait for next day for course {self.nextCourseIndex}")
+                while current_day == datetime.utcnow().weekday():
+                    time.sleep(60)
                 wait_for_next_day = False
                 print('No longer waiting!')
             now = hour_minute.utcnow()
@@ -198,7 +198,7 @@ class iClicker_driver:
                     self.nextCourseIndex = 0
                     wait_for_next_day = True    # Need to set this because [0] < [current] and likely < now
                     print('Wait for next day set')
-                    current_day = datetime.now().weekday()
+                    current_day = datetime.utcnow().weekday()
                 else:
                     self.nextCourseIndex += 1
                 next_course_time = self.course_schedule[self.nextCourseIndex].start_time

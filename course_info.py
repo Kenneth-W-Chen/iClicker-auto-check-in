@@ -85,15 +85,16 @@ class hour_minute:
 
 
 class course_info:
-    def __init__(self, ht: hour_minute, course: str):
-        self.ht: hour_minute = copy.deepcopy(ht)
+    def __init__(self, start_time: hour_minute, end_time: hour_minute, course: str):
+        self.start_time: hour_minute = copy.deepcopy(start_time)
+        self.end_time: hour_minute = copy.deepcopy(end_time)
         self.course: str = copy.deepcopy(course)
 
     def __eq__(self, other):
         if isinstance(other, self.__class__):
-            return self.ht == other.ht
-        elif isinstance(other, self.ht.__class__):
-            return self.ht == other
+            return self.start_time == other.start_time
+        elif isinstance(other, self.start_time.__class__):
+            return self.start_time == other
         else:
             return False
 
@@ -102,33 +103,33 @@ class course_info:
 
     def __gt__(self, other):
         if isinstance(other, self.__class__):
-            return self.ht > other.ht
-        elif isinstance(other, self.ht.__class__):
-            return self.ht > other
+            return self.start_time > other.start_time
+        elif isinstance(other, self.start_time.__class__):
+            return self.start_time > other
         else:
             return False
 
     def __ge__(self, other):
         if isinstance(other, self.__class__):
-            return self.ht >= other.ht
-        elif isinstance(other, self.ht.__class__):
-            return self.ht >= other
+            return self.start_time >= other.start_time
+        elif isinstance(other, self.start_time.__class__):
+            return self.start_time >= other
         else:
             return False
 
     def __lt__(self, other):
         if isinstance(other, self.__class__):
-            return self.ht < other.ht
-        elif isinstance(other, self.ht.__class__):
-            return self.ht < other
+            return self.start_time < other.start_time
+        elif isinstance(other, self.start_time.__class__):
+            return self.start_time < other
         else:
             return False
 
     def __le__(self, other):
         if isinstance(other, self.__class__):
-            return self.ht <= other.ht
-        elif isinstance(other, self.ht.__class__):
-            return self.ht <= other
+            return self.start_time <= other.start_time
+        elif isinstance(other, self.start_time.__class__):
+            return self.start_time <= other
         else:
             return False
 

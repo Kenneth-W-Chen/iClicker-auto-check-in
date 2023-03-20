@@ -24,10 +24,20 @@ Also, I wanted something to try out Selenium on.
     {
       "Email": "myemail@email.com",
       "Password": "mypassword123",
-      "Course":
+      "Courses":
         {
-        "1": "Course name",
-        "2": "Course 2 name"
+        "Course 1 name": 
+        {
+          "Name": "Course 1 name",
+          "Start Time": "21:30",
+          "End Time": "22:50"
+        },
+        "Course 2 name": 
+        {
+          "Name": "Course 2 name",
+          "Start Time": "8:30",
+          "End Time": "11:20"
+        }
         }
     }
   }
@@ -35,6 +45,10 @@ Also, I wanted something to try out Selenium on.
     *The `Course name` value should be the name exactly as it is in iClicker*
     
     *Except for `Account name` and individual course keys, no key names should be adjusted*
+    
+    *The times should be in 24-hour format and based off of UTC time*
+
+    *Do not make End Time overlap with another Start Time (e.g., Course 1 has End Time of 22:50 and Course 2 has Start Time of 22:50)* 
 
 # Usage
 
@@ -48,10 +62,6 @@ Then create an iClicker_driver object. Optional arguments include
 * `auto_wait` - A boolean that defines whether the object should automatically wait for the meeting to start upon entering a course. Default is `True`
 
 Call `start()` to set up the WebDriver and log-in. You should be prompted for an account name, which should be the `Account name` in the *.json* config file (e.g., "Account name" as it is in the above example).
-
-Call `navigate_to_course(course_name)` to move the webpage to a specific course.
-- `course_name` is the key for the course in the *.json* config file (e.g., "1" and "2" in the above example file)
-- If `auto_wait` is set to False, you need to manually call `start_wait` to have the driver wait for the meeting to start.
 
 # To-do
 

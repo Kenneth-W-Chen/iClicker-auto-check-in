@@ -65,7 +65,4 @@ Call `start()` to set up the WebDriver and log-in. You should be prompted for an
 
 # To-do
 
-* Implement a way to check for which course to log into. Maybe adjust the config file to include a date-time value?
-* Maybe have the thing go back and forth based on times?
 * Implement adjustment of geolocation.
-* Test meetings ending and seeing if the WebDriver needs to restart or press the back arrow to function.

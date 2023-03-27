@@ -1,6 +1,6 @@
-from iClicker_driver import iClicker_driver as driver
+from iClicker_driver import iClicker_driver as Driver
 
 
-runner: driver = driver('example_run_config.json')
+runner: Driver = Driver('example_run_config.json')
 runner.start('Kenneth-Chen')
 

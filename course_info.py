@@ -1,10 +1,8 @@
-import copy
-import datetime
-import math
-from typing import Union
+from copy import deepcopy
+from datetime import datetime
 
 
-class hour_minute:
+class HourMinute:
     def __init__(self, hour: int, minute: int):
         self.hour = hour
         self.minute = minute
@@ -12,17 +10,17 @@ class hour_minute:
     @classmethod
     def from_str(cls, s: str):
         arr = s.split(':')
-        return hour_minute(int(arr[0]),int(arr[1]))
+        return HourMinute(int(arr[0]), int(arr[1]))
 
     @classmethod
     def now(cls):
-        n = datetime.datetime.now()
-        return hour_minute(n.hour, n.minute)
+        n = datetime.now()
+        return HourMinute(n.hour, n.minute)
 
     @classmethod
     def utcnow(cls):
-        n = datetime.datetime.utcnow()
-        return hour_minute(n.hour, n.minute)
+        n = datetime.utcnow()
+        return HourMinute(n.hour, n.minute)
 
     def toSeconds(self):
         return (60 * self.hour + self.minute) * 60
@@ -85,10 +83,10 @@ class hour_minute:
 
 
 class course_info:
-    def __init__(self, start_time: hour_minute, end_time: hour_minute, course: str):
-        self.start_time: hour_minute = copy.deepcopy(start_time)
-        self.end_time: hour_minute = copy.deepcopy(end_time)
-        self.course: str = copy.deepcopy(course)
+    def __init__(self, start_time: HourMinute, end_time: HourMinute, course: str):
+        self.start_time: HourMinute = deepcopy(start_time)
+        self.end_time: HourMinute = deepcopy(end_time)
+        self.course: str = deepcopy(course)
 
     def __eq__(self, other):
         if isinstance(other, self.__class__):

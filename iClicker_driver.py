@@ -1,19 +1,17 @@
-import json
-import time
+from json import load
+from time import sleep
+
+from datetime import datetime
+from threading import Thread, Lock, Event
 from typing import Union, List
 
-import selenium.common
-import seleniumwire.request
+from seleniumwire.request import Request, Response
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as ec
 from selenium.webdriver.support.wait import WebDriverWait
-from selenium.common.exceptions import TimeoutException, NoSuchElementException
 from seleniumwire import webdriver
-from threading import Thread
-from threading import Lock
-from threading import Event
-from datetime import datetime
-from course_info import hour_minute, course_info
+
+from course_info import HourMinute, course_info
 
 
 class iClicker_driver:
@@ -35,7 +33,7 @@ class iClicker_driver:
 
         # Config info
         with open(config_file, 'r') as f:
-            self.config: dict = json.load(f)
+            self.config: dict = load(f)
         self.account_name: str = ''
 
         self.auto_wait = auto_wait
@@ -44,9 +42,6 @@ class iClicker_driver:
         self.course_schedule: List[course_info] = []
         self.currentCourseIndex = -1
         self.nextCourseIndex = 0
-
-        # This event is to ensure that we didn't get logged out at some point... don't really like this
-        self.urlCheckEvent: Event = Event()
 
         # Thread to wait to join up
         self.wait_thread: Thread = Thread(name='WaitForMeeting', target=self.wait_for_meeting)
@@ -155,7 +150,6 @@ class iClicker_driver:
                 self.joinThreadIsWaiting = False
                 self.time_lock.release()
                 print('Join button thread restarted from wait_for_time!')
-            return
         next_course_time = self.course_schedule[self.nextCourseIndex].start_time
         wait_for_next_day: bool = False
         current_day: int
@@ -163,10 +157,10 @@ class iClicker_driver:
             if wait_for_next_day:
                 print(f"Need to wait for next day for course {self.nextCourseIndex}")
                 while current_day == datetime.utcnow().weekday():
-                    time.sleep(60)
+                    sleep(60)
                 wait_for_next_day = False
                 print('No longer waiting!')
-            now = hour_minute.utcnow()
+            now = HourMinute.utcnow()
             if now >= next_course_time : # and now >= self.course_schedule[self.currentCourseIndex].end_time
                 print("Time change! Now is %s, and next course time is %s", now, next_course_time)
                 print('Trying to acquire time_lock to switch courses')
@@ -206,11 +200,12 @@ class iClicker_driver:
                 print("Releasing time_lock")
                 self.time_lock.release()
             else:
-                time.sleep(.5)
+                sleep(.5)
 
     def wait_for_url_change(self):  # Todo
+        wait = WebDriverWait(self.driver)
         while True:
-            self.urlCheckEvent.wait()
+            pass
 
     def get_account(self, name: Union[str, None] = None):
         if name is None:
@@ -224,7 +219,7 @@ class iClicker_driver:
     def wait_for_ajax(self):
         WebDriverWait(self.driver, 20).until(lambda d: self.driver.execute_script("return jQuery.active == 0"))
 
-    def response_interceptor(self, request: seleniumwire.request.Request, response: seleniumwire.request.Response):
+    def response_interceptor(self, request: Request, response: Response):
         if request.url == self.REQUEST_URL:
             body = response.body.decode()
             if self.joinUp:
@@ -234,14 +229,20 @@ class iClicker_driver:
             elif body[63:67] != 'null':
                 self.joinUp = True
                 self.joinEvent.set()
+            else:
+                file = open("HTTP_req.log", "a")
+                file.write(f'-------------\n{datetime.utcnow()}\n'
+                           f'Request:\n{request.url}\n{request.body.decode("utf-8")}\n'
+                           f'Response:\n{response.body.decode("utf-8")}')
+                file.close()
         # Todo: iClicker doesn't auto log-out for at least 1 day. Idk if it'll do further than that though
 
     def set_up_courses(self):
         for key, value in self.config[self.account_name]['Courses'].items():
-            self.course_schedule.append(course_info(hour_minute.from_str(value['Start Time']),
-                                                    hour_minute.from_str(value['End Time']), value['Name']))
+            self.course_schedule.append(course_info(HourMinute.from_str(value['Start Time']),
+                                                    HourMinute.from_str(value['End Time']), value['Name']))
         self.course_schedule.sort()
-        now = hour_minute.utcnow()
+        now = HourMinute.utcnow()
         self.nextCourseIndex = len(self.course_schedule)-1
         for i in range(len(self.course_schedule)):
             if now <= self.course_schedule[i]:

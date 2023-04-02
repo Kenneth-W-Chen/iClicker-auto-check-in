@@ -256,14 +256,14 @@ class iClicker_driver:
                 self.logInFlag = True
                 self.logInEvent.set()
                 return
-            if self.joinUp:
-                if body[63:67] == 'null':
+            if body[63:67] == 'null':
+                if self.joinUp:
                     self.joinUp = False
                     return
-            elif body[63:67] != 'null':
+            elif body[52:61] == 'meetingID':
                 self.joinUp = True
                 self.joinEvent.set()
-            else:
+            else:   # Logs unhandled HTTP responses
                 file = open("HTTP_req.log", "a")
                 file.write(f'-------------\n{datetime.utcnow()}\n'
                            f'Request:\n{request.url}\n{request.body.decode("utf-8")}\n'

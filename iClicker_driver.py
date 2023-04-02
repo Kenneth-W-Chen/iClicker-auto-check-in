@@ -116,7 +116,8 @@ class iClicker_driver:
             self.wait_for_ajax()
             WebDriverWait(self.driver, 20).until(ec.element_to_be_clickable((By.ID, self.JOIN_BTN_ID))).click()
             # three-dot-loader
-            WebDriverWait(self.driver, 20).until(ec.invisibility_of_element((By.ID, 'three-dot-loader')))   # What is this for?
+            WebDriverWait(self.driver, 20).until(
+                ec.invisibility_of_element((By.ID, 'three-dot-loader')))  # What is this for?
             print('Clicked button and stuff...')
             self.joinThreadIsWaiting = True
             self.joinThreadIsWaitingEvent.set()
@@ -152,7 +153,7 @@ class iClicker_driver:
                 print('Join button thread restarted from wait_for_time!')
         next_course_time = self.course_schedule[self.nextCourseIndex].start_time
         wait_for_next_day: bool = False
-        current_day: int
+        current_day: int = datetime.utcnow().weekday()
         while True:
             if wait_for_next_day:
                 print(f"Need to wait for next day for course {self.nextCourseIndex}")
@@ -161,7 +162,7 @@ class iClicker_driver:
                 wait_for_next_day = False
                 print('No longer waiting!')
             now = HourMinute.utcnow()
-            if now >= next_course_time : # and now >= self.course_schedule[self.currentCourseIndex].end_time
+            if now >= next_course_time:  # and now >= self.course_schedule[self.currentCourseIndex].end_time
                 print("Time change! Now is %s, and next course time is %s", now, next_course_time)
                 print('Trying to acquire time_lock to switch courses')
                 self.time_lock.acquire()
@@ -188,9 +189,9 @@ class iClicker_driver:
 
                 # Setting up next course switch
                 self.currentCourseIndex = self.nextCourseIndex
-                if self.nextCourseIndex == len(self.course_schedule) - 1:   # Loop the next course
+                if self.nextCourseIndex == len(self.course_schedule) - 1:  # Loop the next course
                     self.nextCourseIndex = 0
-                    wait_for_next_day = True    # Need to set this because [0] < [current] and likely < now
+                    wait_for_next_day = True  # Need to set this because [0] < [current] and likely < now
                     print('Wait for next day set')
                     current_day = datetime.utcnow().weekday()
                 else:
@@ -201,11 +202,6 @@ class iClicker_driver:
                 self.time_lock.release()
             else:
                 sleep(.5)
-
-    def wait_for_url_change(self):  # Todo
-        wait = WebDriverWait(self.driver)
-        while True:
-            pass
 
     def get_account(self, name: Union[str, None] = None):
         if name is None:
@@ -243,7 +239,7 @@ class iClicker_driver:
                                                     HourMinute.from_str(value['End Time']), value['Name']))
         self.course_schedule.sort()
         now = HourMinute.utcnow()
-        self.nextCourseIndex = len(self.course_schedule)-1
+        self.nextCourseIndex = len(self.course_schedule) - 1
         for i in range(len(self.course_schedule)):
             if now <= self.course_schedule[i]:
                 self.nextCourseIndex = i

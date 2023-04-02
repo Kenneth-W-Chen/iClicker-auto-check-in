@@ -48,14 +48,22 @@ class iClicker_driver:
 
         self.time_thread: Thread = Thread(name='CheckTime', target=self.wait_for_time)
 
+        self.log_back_in_thread: Thread = Thread(name='LogBackIn', target=self.log_back_in)
+
         self.time_lock: Lock = Lock()  # Thread lock
+        # self.log_back_in_lock: Lock = Lock()  # May be unnecessary
 
         self.joinEvent: Event = Event()
         self.joinThreadIsWaitingEvent: Event = Event()
         self.joinThreadIsWaiting: bool = False
         self.restartEvent: Event = Event()
         self.restartFlag: bool = False
+        self.logInEvent: Event = Event()
+        self.logInFlag: bool = False
+
         self.currentCourse: str = ''
+
+
 
     def start(self, account_name: Union[str, None] = None):
         try:
@@ -78,7 +86,8 @@ class iClicker_driver:
         self.wait_for_ajax()
         self.driver.implicitly_wait(5)
         self.navigate_to_course(self.course_schedule[self.currentCourseIndex].course)
-        self.time_thread.start()
+        if not self.time_thread.is_alive():
+            self.time_thread.start()
 
     def navigate_to_course(self, course: str):
         self.time_lock.acquire()
@@ -202,10 +211,28 @@ class iClicker_driver:
             else:
                 sleep(.5)
 
+    def log_back_in(self):
+        while True:
+            while True:
+                self.logInEvent.wait()
+                if self.logInFlag:
+                    break
+            # self.log_back_in_lock.acquire()
+            self.time_lock.acquire()
+            if self.driver.current_url != self.LOG_IN_URL:
+                self.driver.get(self.LOG_IN_URL)
+                self.wait_for_ajax()
+            self.log_in()
+            self.logInFlag = False
+            self.time_lock.release()
+
+
+
     def wait_for_url_change(self):  # Todo
         wait = WebDriverWait(self.driver)
         while True:
             pass
+
 
     def get_account(self, name: Union[str, None] = None):
         if name is None:
@@ -222,10 +249,17 @@ class iClicker_driver:
     def response_interceptor(self, request: Request, response: Response):
         if request.url == self.REQUEST_URL:
             body = response.body.decode()
+            if len(body) < 10:
+                return
+            if body[10:25] == 'invalid_token':  # Need to log back in
+                self.joinUp = False
+                self.logInFlag = True
+                self.logInEvent.set()
+                return
             if self.joinUp:
                 if body[63:67] == 'null':
                     self.joinUp = False
-                    # return
+                    return
             elif body[63:67] != 'null':
                 self.joinUp = True
                 self.joinEvent.set()
@@ -235,7 +269,6 @@ class iClicker_driver:
                            f'Request:\n{request.url}\n{request.body.decode("utf-8")}\n'
                            f'Response:\n{response.body.decode("utf-8")}')
                 file.close()
-        # Todo: iClicker doesn't auto log-out for at least 1 day. Idk if it'll do further than that though
 
     def set_up_courses(self):
         for key, value in self.config[self.account_name]['Courses'].items():

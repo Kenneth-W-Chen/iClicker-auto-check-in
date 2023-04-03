@@ -10,6 +10,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as ec
 from selenium.webdriver.support.wait import WebDriverWait
 from seleniumwire import webdriver
+from selenium.common.exceptions import TimeoutException
 
 from course_info import HourMinute, course_info
 
@@ -125,10 +126,13 @@ class iClicker_driver:
             print('Join is up! Waiting for AJAX to load...')
             self.driver.implicitly_wait(3)
             self.wait_for_ajax()
-            WebDriverWait(self.driver, 20).until(ec.element_to_be_clickable((By.ID, self.JOIN_BTN_ID))).click()
-            # three-dot-loader
-            WebDriverWait(self.driver, 20).until(ec.invisibility_of_element((By.ID, 'three-dot-loader')))   # What is this for?
-            print('Clicked button and stuff...')
+            try:
+                WebDriverWait(self.driver, 20).until(ec.element_to_be_clickable((By.ID, self.JOIN_BTN_ID))).click()
+                # three-dot-loader
+                WebDriverWait(self.driver, 20).until(ec.invisibility_of_element((By.ID, 'three-dot-loader')))   # What is this for?
+                print('Clicked button and stuff...')
+            except TimeoutException:
+                print('Timed-out waiting for join button to appear!')
             self.joinThreadIsWaiting = True
             self.joinThreadIsWaitingEvent.set()
             self.time_lock.release()

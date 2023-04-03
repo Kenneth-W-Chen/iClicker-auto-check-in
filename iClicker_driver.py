@@ -88,6 +88,8 @@ class iClicker_driver:
         self.navigate_to_course(self.course_schedule[self.currentCourseIndex].course)
         if not self.time_thread.is_alive():
             self.time_thread.start()
+        if not self.log_back_in_thread.is_alive():
+            self.log_back_in_thread.start()
 
     def navigate_to_course(self, course: str):
         self.time_lock.acquire()

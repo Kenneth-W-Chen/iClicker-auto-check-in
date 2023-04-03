@@ -262,7 +262,7 @@ class iClicker_driver:
                 if self.joinUp:
                     self.joinUp = False
                     return
-            elif body[52:61] == 'meetingID':
+            elif body[52:61] == 'meetingId':
                 self.joinUp = True
                 self.joinEvent.set()
             else:   # Logs unhandled HTTP responses

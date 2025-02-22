@@ -10,6 +10,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as ec
 from selenium.webdriver.support.wait import WebDriverWait
 from seleniumwire import webdriver
+from selenium.webdriver.chrome.service import Service
 
 from course_info import HourMinute, course_info
 
@@ -20,15 +21,22 @@ class iClicker_driver:
     COURSES_URL: str = 'https://student.iclicker.com/#/courses'
     JOIN_BTN_ID: str = 'btnJoin'
 
-    def __init__(self, config_file: str = 'config.json', auto_wait: bool = True):
+    def __init__(self, config_file: str = 'config.json', auto_wait: bool = True, driver_path: Union[str, None] = None):
         self.joinUp: bool = False
-        self.driver: webdriver.Chrome = webdriver.Chrome(
-            seleniumwire_options={
-                'exclude_hosts': ['eum-us-west-2.instana.io', 'analytic.rollout.io', 'accounts.google.com',
-                                  'www.google-analytics.com',
-                                  'iclicker-prod-inst-analytics.macmillanlearning.com'],
-                'ignore_http_methods': ['GET', 'HEAD', 'PUT', 'DELETE', 'CONNECT', 'OPTIONS', 'TRACE',
-                                        'PATCH']})
+        seleniumwire_options = {
+            'exclude_hosts': ['eum-us-west-2.instana.io',
+                              'analytic.rollout.io',
+                              'accounts.google.com',
+                              'www.google-analytics.com',
+                              'iclicker-prod-inst-analytics.macmillanlearning.com'],
+            'ignore_http_methods': ['GET', 'HEAD', 'PUT', 'DELETE',
+                                    'CONNECT', 'OPTIONS', 'TRACE',
+                                    'PATCH']}
+        if driver_path is not None:
+            self.driver: webdriver.Chrome = webdriver.Chrome(service=Service(driver_path),
+                                                             seleniumwire_options=seleniumwire_options)
+        else:
+            self.driver: webdriver.Chrome = webdriver.Chrome(seleniumwire_options=seleniumwire_options)
         self.driver.response_interceptor = self.response_interceptor
 
         # Config info
@@ -65,34 +73,34 @@ class iClicker_driver:
             print("Couldn't find email or password in config file. Not starting...")
         self.set_up_courses()
         self.driver.get(self.LOG_IN_URL)
-        self.wait_for_ajax()
+        self.wait_for_element('#sign-in-button')
         self.log_in()
 
     def log_in(self):
         # Logs in
-        WebDriverWait(self.driver, 20).until(ec.element_to_be_clickable((By.ID, 'userEmail'))) \
-            .send_keys(self.config[self.account_name]['Email'])
-        WebDriverWait(self.driver, 20).until(ec.element_to_be_clickable((By.ID, 'userPassword'))) \
-            .send_keys(self.config[self.account_name]['Password'])
+        element = WebDriverWait(self.driver, 20).until(ec.element_to_be_clickable((By.ID, 'input-email')))
+        self.driver.execute_script('document.querySelector("#input-email").removeAttribute("maxlength")')
+        element.send_keys(self.config[self.account_name]['Email'])
+        element = WebDriverWait(self.driver, 20).until(ec.element_to_be_clickable((By.ID, 'input-password')))
+        self.driver.execute_script('document.querySelector("#input-password").removeAttribute("maxlength")')
+        element.send_keys(self.config[self.account_name]['Password'])
         WebDriverWait(self.driver, 20).until(ec.element_to_be_clickable((By.ID, 'sign-in-button'))).click()
-        self.wait_for_ajax()
-        self.driver.implicitly_wait(5)
+        self.wait_for_element('.course-title')
         self.navigate_to_course(self.course_schedule[self.currentCourseIndex].course)
         self.time_thread.start()
 
     def navigate_to_course(self, course: str):
         self.time_lock.acquire()
-        print("Navigating to course %s", course)
+        print("Navigating to course ", course)
         # This XPath searches for the course button by the text contained within.
         # Unfortunately the buttons don't have descriptive IDs, so we have to use XPath
-        WebDriverWait(self.driver, 20) \
-            .until(ec.element_to_be_clickable((By.XPATH,
-                                               f'/html/body/div/div/div/div/div/main/div/ul/li/a[label[text() = '
-                                               f'\'{course}\']]'))).click()
+        WebDriverWait(self.driver, 20).until(
+            ec.element_to_be_clickable((By.XPATH, f'//a[label[text() = \'{course}\']]'))).click()
         self.currentCourse = course
         del self.driver.requests
         if self.auto_wait:
             self.start_wait()
+        self.wait_thread.join()
         self.time_lock.release()
 
     def start_wait(self):
@@ -113,7 +121,6 @@ class iClicker_driver:
             self.joinEvent.clear()
             print('Join is up! Waiting for AJAX to load...')
             self.driver.implicitly_wait(3)
-            self.wait_for_ajax()
             WebDriverWait(self.driver, 20).until(ec.element_to_be_clickable((By.ID, self.JOIN_BTN_ID))).click()
             # three-dot-loader
             WebDriverWait(self.driver, 20).until(
@@ -174,9 +181,7 @@ class iClicker_driver:
                         print('Switching to courses URL...')
                         self.driver.get(self.COURSES_URL)
                 print('Waiting for webpage to load')
-                self.wait_for_ajax()
-                self.driver.implicitly_wait(5)
-                self.wait_for_ajax()
+                self.wait_for_element('.course-title')
                 print("Done waiting. Navigating to course of %s", self.course_schedule[self.nextCourseIndex].course)
                 self.time_lock.release()
                 self.navigate_to_course(self.course_schedule[self.nextCourseIndex].course)
@@ -212,8 +217,8 @@ class iClicker_driver:
                 self.config[self.account_name]:
             raise ValueError("Could not find email or password in config file.")
 
-    def wait_for_ajax(self):
-        WebDriverWait(self.driver, 20).until(lambda d: self.driver.execute_script("return jQuery.active == 0"))
+    def wait_for_element(self, selector):
+        WebDriverWait(self.driver, 30).until(ec.presence_of_element_located((By.CSS_SELECTOR, selector)))
 
     def response_interceptor(self, request: Request, response: Response):
         if request.url == self.REQUEST_URL:
@@ -231,7 +236,6 @@ class iClicker_driver:
                            f'Request:\n{request.url}\n{request.body.decode("utf-8")}\n'
                            f'Response:\n{response.body.decode("utf-8")}')
                 file.close()
-        # Todo: iClicker doesn't auto log-out for at least 1 day. Idk if it'll do further than that though
 
     def set_up_courses(self):
         for key, value in self.config[self.account_name]['Courses'].items():
@@ -249,3 +253,8 @@ class iClicker_driver:
         else:
             self.currentCourseIndex = self.nextCourseIndex - 1
         print('Courses set up')
+
+    def _send_keys(self, element, string: str):
+        for c in string:
+            element.send_keys(c)
+            self.driver.implicitly_wait(0.5)

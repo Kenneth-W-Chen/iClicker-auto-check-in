@@ -13,6 +13,7 @@ from seleniumwire import webdriver
 from selenium.webdriver.chrome.service import Service
 
 from course_info import HourMinute, course_info
+from json import loads
 
 
 class iClicker_driver:
@@ -21,7 +22,9 @@ class iClicker_driver:
     COURSES_URL: str = 'https://student.iclicker.com/#/courses'
     JOIN_BTN_ID: str = 'btnJoin'
 
-    def __init__(self, config_file: str = 'config.json', auto_wait: bool = True, driver_path: Union[str, None] = None):
+    def __init__(self, config_file: str = 'config.json', auto_wait: bool = True, driver_path: Union[str, None] = None,
+                 debug: bool = False):
+        self.debug = debug
         self.joinUp: bool = False
         seleniumwire_options = {
             'exclude_hosts': ['eum-us-west-2.instana.io',
@@ -70,7 +73,8 @@ class iClicker_driver:
             if not self.account_name:
                 self.get_account(account_name)
         except ValueError:
-            print("Couldn't find email or password in config file. Not starting...")
+            if self.debug:
+                print("Couldn't find email or password in config file. Not starting...")
         self.set_up_courses()
         self.driver.get(self.LOG_IN_URL)
         self.wait_for_element('#sign-in-button')
@@ -91,7 +95,8 @@ class iClicker_driver:
 
     def navigate_to_course(self, course: str):
         self.time_lock.acquire()
-        print("Navigating to course ", course)
+        if self.debug:
+            print("Navigating to course ", course)
         # This XPath searches for the course button by the text contained within.
         # Unfortunately the buttons don't have descriptive IDs, so we have to use XPath
         WebDriverWait(self.driver, 20).until(
@@ -109,27 +114,33 @@ class iClicker_driver:
 
     def wait_for_meeting(self):
         while True:
-            print('Waiting for meeting...')
+            if self.debug:
+                print('Waiting for meeting...')
             while True:
-                print('Waiting for join event...')
+                if self.debug:
+                    print('Waiting for join event...')
                 self.joinEvent.wait()
                 self.time_lock.acquire()
                 if self.joinUp:
                     break
-                print('Spurious wake-up. Ignoring...')
+                if self.debug:
+                    print('Spurious wake-up. Ignoring...')
                 self.time_lock.release()
             self.joinEvent.clear()
-            print('Join is up! Waiting for AJAX to load...')
+            if self.debug:
+                print('Join is up! Waiting for AJAX to load...')
             self.driver.implicitly_wait(3)
             WebDriverWait(self.driver, 20).until(ec.element_to_be_clickable((By.ID, self.JOIN_BTN_ID))).click()
             # three-dot-loader
             WebDriverWait(self.driver, 20).until(
                 ec.invisibility_of_element((By.ID, 'three-dot-loader')))  # What is this for?
-            print('Clicked button and stuff...')
+            if self.debug:
+                print('Clicked button and stuff...')
             self.joinThreadIsWaiting = True
             self.joinThreadIsWaitingEvent.set()
             self.time_lock.release()
-            print('Released time_lock. Waiting for restart flag...')
+            if self.debug:
+                print('Released time_lock. Waiting for restart flag...')
             # todo: add wait for event to restart
             while True:
                 self.restartEvent.wait()
@@ -139,54 +150,68 @@ class iClicker_driver:
                 self.time_lock.release()
             self.restartFlag = False
             self.time_lock.release()
-            print('Restart flag raised. wait_for_meeting is restarting...')
+            if self.debug:
+                print('Restart flag raised. wait_for_meeting is restarting...')
 
     def wait_for_time(self):
         if len(self.course_schedule) <= 1:
-            print('Only one course in list found. Ignoring time scheduling...')
+            if self.debug:
+                print('Only one course in list found. Ignoring time scheduling...')
             while True:
-                print('Waiting for join thread to need to restart...')
+                if self.debug:
+                    print('Waiting for join thread to need to restart...')
                 while True:
                     self.joinThreadIsWaitingEvent.wait()
                     self.time_lock.acquire()
                     if self.joinThreadIsWaiting:
                         break
                     self.time_lock.release()
-                print('Restarting join button thread...')
+                if self.debug:
+                    print('Restarting join button thread...')
                 self.restartFlag = True
                 self.restartEvent.set()
                 self.joinThreadIsWaiting = False
                 self.time_lock.release()
-                print('Join button thread restarted from wait_for_time!')
+                if self.debug:
+                    print('Join button thread restarted from wait_for_time!')
         next_course_time = self.course_schedule[self.nextCourseIndex].start_time
         wait_for_next_day: bool = False
         current_day: int = datetime.utcnow().weekday()
         while True:
             if wait_for_next_day:
-                print(f"Need to wait for next day for course {self.nextCourseIndex}")
+                if self.debug:
+                    print(f"Need to wait for next day for course {self.nextCourseIndex}")
                 while current_day == datetime.utcnow().weekday():
                     sleep(60)
                 wait_for_next_day = False
-                print('No longer waiting!')
+                if self.debug:
+                    print('No longer waiting!')
             now = HourMinute.utcnow()
             if now >= next_course_time:  # and now >= self.course_schedule[self.currentCourseIndex].end_time
-                print("Time change! Now is %s, and next course time is %s", now, next_course_time)
-                print('Trying to acquire time_lock to switch courses')
+                if self.debug:
+                    print("Time change! Now is %s, and next course time is %s", now, next_course_time)
+                if self.debug:
+                    print('Trying to acquire time_lock to switch courses')
                 self.time_lock.acquire()
                 if self.driver.current_url != self.COURSES_URL:
                     if self.driver.current_url == self.LOG_IN_URL:
-                        print('Driver was in log-in URL. Logging in...')
+                        if self.debug:
+                            print('Driver was in log-in URL. Logging in...')
                         self.log_in()
                     else:
-                        print('Switching to courses URL...')
+                        if self.debug:
+                            print('Switching to courses URL...')
                         self.driver.get(self.COURSES_URL)
-                print('Waiting for webpage to load')
+                if self.debug:
+                    print('Waiting for webpage to load')
                 self.wait_for_element('.course-title')
-                print("Done waiting. Navigating to course of %s", self.course_schedule[self.nextCourseIndex].course)
+                if self.debug:
+                    print("Done waiting. Navigating to course of %s", self.course_schedule[self.nextCourseIndex].course)
                 self.time_lock.release()
                 self.navigate_to_course(self.course_schedule[self.nextCourseIndex].course)
                 self.time_lock.acquire()
-                print("Done navigating. Resetting events")
+                if self.debug:
+                    print("Done navigating. Resetting events")
                 self.joinUp = False
                 self.joinEvent.clear()
                 self.restartFlag = True
@@ -197,13 +222,16 @@ class iClicker_driver:
                 if self.nextCourseIndex == len(self.course_schedule) - 1:  # Loop the next course
                     self.nextCourseIndex = 0
                     wait_for_next_day = True  # Need to set this because [0] < [current] and likely < now
-                    print('Wait for next day set')
+                    if self.debug:
+                        print('Wait for next day set')
                     current_day = datetime.utcnow().weekday()
                 else:
                     self.nextCourseIndex += 1
                 next_course_time = self.course_schedule[self.nextCourseIndex].start_time
-                print("Next course switch to occur at %s", next_course_time)
-                print("Releasing time_lock")
+                if self.debug:
+                    print("Next course switch to occur at %s", next_course_time)
+                if self.debug:
+                    print("Releasing time_lock")
                 self.time_lock.release()
             else:
                 sleep(.5)
@@ -222,20 +250,28 @@ class iClicker_driver:
 
     def response_interceptor(self, request: Request, response: Response):
         if request.url == self.REQUEST_URL:
-            body = response.body.decode()
+            body = loads(response.body.decode())
             if self.joinUp:
-                if body[63:67] == 'null':
+                if body['meetingId'] is None:
                     self.joinUp = False
                     # return
-            elif body[63:67] != 'null':
+            elif body['meetingId'] is not None:
                 self.joinUp = True
                 self.joinEvent.set()
-            else:
+            elif response.status_code != 200:
+                if not (200 <= response.status_code <= 299):
+                    raise UnexpectedStatusCodeException(request.url, response.status_code, request,
+                                                        response.body.decode())
+                if self.debug:
+                    print('Logging')
                 file = open("HTTP_req.log", "a")
                 file.write(f'-------------\n{datetime.utcnow()}\n'
                            f'Request:\n{request.url}\n{request.body.decode("utf-8")}\n'
                            f'Response:\n{response.body.decode("utf-8")}')
                 file.close()
+            else:
+                if self.debug:
+                    print(f'{datetime.utcnow()}\t{body}')
 
     def set_up_courses(self):
         for key, value in self.config[self.account_name]['Courses'].items():
@@ -252,9 +288,23 @@ class iClicker_driver:
             self.currentCourseIndex = len(self.course_schedule) - 1
         else:
             self.currentCourseIndex = self.nextCourseIndex - 1
-        print('Courses set up')
+        if self.debug:
+            print('Courses set up')
 
     def _send_keys(self, element, string: str):
         for c in string:
             element.send_keys(c)
             self.driver.implicitly_wait(0.5)
+
+
+class UnexpectedStatusCodeException(Exception):
+    def __init__(self, url, status_code, request: Request, response_body, message=None):
+        self.url = url
+        self.status_code = status_code
+        self.request = request
+        self.response_body = response_body
+        if isinstance(message, str):
+            super().__init__(message)
+        else:
+            super().__init__(f'The WebDriver received an unexpected status code ({self.status_code}) from {self.url}. '
+                             f'Request headers: {request.headers}; Request body: {request.body.decode}')

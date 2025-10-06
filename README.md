@@ -11,9 +11,11 @@ Also, I wanted something to try out Selenium on.
 
 * Python. You can install it [here](https://www.python.org/downloads/).
 * Selenium and Selenium-wire python packages. You can install via pip using
+* **Blinker 1.7.0** - Newer versions will not work
+ 
 
   ```
-  pip install selenium-wire selenium
+  pip install blinker==1.7.0 selenium-wire selenium
   ```
 * [Google Chrome](https://www.google.com/chrome/) or the [Chrome WebDriver](https://sites.google.com/chromium.org/driver/) installed.
 * A `config.json` file in the running directory. It should be formatted like this:
@@ -60,8 +62,41 @@ Import `iClicker_driver` into your code using
 Then create an iClicker_driver object. Optional arguments include
 * `config_file` - The filename of the *.json* which contains all the account and course information. Default is `config.json`
 * `auto_wait` - A boolean that defines whether the object should automatically wait for the meeting to start upon entering a course. Default is `True`
+* `debug` - A boolean that determines if the driver outputs certain information to the console.
 
 Call `start()` to set up the WebDriver and log-in. You should be prompted for an account name, which should be the `Account name` in the *.json* config file (e.g., "Account name" as it is in the above example).
+
+# Example
+With the following config file:
+```json
+{
+  "Profile name": {
+    "Email": "myemail@email.com",
+    "Password": "mypassword123",
+    "Courses": {
+      "MyCourse 2023 Fall": {
+        "Name": "Course Name As It Appears in iClicker",
+        "Start Time": "10:31",
+        "End Time": "11:59"
+      },
+      "MyCourse 2022 Fall": {
+        "Name": "Course Name As It Appears in iClicker",
+        "Start Time": "12:00",
+        "End Time": "14:30"
+      }
+    }
+  }
+}
+
+```
+
+
+```python
+from iClicker_driver import iClicker_driver
+
+driver = iClicker_driver(config_file='myconfigfile.json', driver_path= '\\chromedriver.exe', debug=True)
+driver.start('Profile name')
+```
 
 # To-do
 

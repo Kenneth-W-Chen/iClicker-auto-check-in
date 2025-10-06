@@ -1,3 +1,7 @@
 /venv/
 /config.json
 /main.py
+/.idea
+HTTP_req.log
+**/chromedriver.exe
+__pycache__/

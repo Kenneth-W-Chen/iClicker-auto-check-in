@@ -1,0 +1,18 @@
+{
+  "Default":
+  {
+    "Email": "email@email.com",
+    "Password": "password",
+    "Courses":
+      {
+      "test":
+      {
+        "Name": "test",
+        "Start Time": "21:30",
+        "End Time": "22:50",
+        "Longitude": 93.268192,
+        "Latitude": 23.84931293
+      }
+      }
+  }
+}

@@ -32,7 +32,9 @@ Also, I wanted something to try out Selenium on.
         {
           "Name": "Course 1 name",
           "Start Time": "21:30",
-          "End Time": "22:50"
+          "End Time": "22:50",
+          "Latitude": 118.3939420,
+          "Longitude": 23.3949393
         },
         "Course 2 name": 
         {
@@ -50,14 +52,16 @@ Also, I wanted something to try out Selenium on.
     
     *The times should be in 24-hour format and based off of UTC time*
 
-    *Do not make End Time overlap with another Start Time (e.g., Course 1 has End Time of 22:50 and Course 2 has Start Time of 22:50)* 
+    *Do not make End Time overlap with another Start Time (e.g., Course 1 has End Time of 22:50 and Course 2 has Start Time of 22:50)*
+
+    *Latitude and Longitude are optional. They should be in degrees. Cardinal direction should be represented with a positive/negative value (North and East or positive)*
 
 # Usage
 
 Import `iClicker_driver` into your code using
-  ```python
-  from iClicker_driver import iClicker_driver
-  ```
+```python
+from iClicker_driver import iClicker_driver
+```
 
 Then create an iClicker_driver object. Optional arguments include
 * `config_file` - The filename of the *.json* which contains all the account and course information. Default is `config.json`

@@ -90,21 +90,27 @@ class iClicker_driver:
         element.send_keys(self.config[self.account_name]['Password'])
         WebDriverWait(self.driver, 20).until(ec.element_to_be_clickable((By.ID, 'sign-in-button'))).click()
         self.wait_for_element('.course-title')
-        self.navigate_to_course(self.course_schedule[self.currentCourseIndex].course)
+        self.navigate_to_course(self.course_schedule[self.currentCourseIndex])
         self.time_thread.start()
 
-    def navigate_to_course(self, course: str):
+    def navigate_to_course(self, course: course_info):
         self.time_lock.acquire()
         if self.debug:
-            print("Navigating to course ", course)
+            print("Navigating to course ", course.course)
         # This XPath searches for the course button by the text contained within.
         # Unfortunately the buttons don't have descriptive IDs, so we have to use XPath
         WebDriverWait(self.driver, 20).until(
-            ec.element_to_be_clickable((By.XPATH, f'//a[label[text() = \'{course}\']]'))).click()
-        self.currentCourse = course
+            ec.element_to_be_clickable((By.XPATH, f'//a[label[text() = \'{course.course}\']]'))).click()
+        self.currentCourse = course.course
         del self.driver.requests
         if self.auto_wait:
             self.start_wait()
+        if course.location[0] is not False and course.location[1] is not False:
+            self.driver.execute_cdp_cmd("Page.setGeolocationOverride", {
+                "latitude": course.location[0],
+                "longitude": course.location[1],
+                "accuracy": 100
+            })
         self.time_lock.release()
         self.wait_thread.join()
 
@@ -210,7 +216,7 @@ class iClicker_driver:
                 if self.debug:
                     print("Done waiting. Navigating to course of %s", self.course_schedule[self.nextCourseIndex].course)
                 self.time_lock.release()
-                self.navigate_to_course(self.course_schedule[self.nextCourseIndex].course)
+                self.navigate_to_course(self.course_schedule[self.nextCourseIndex])
                 self.time_lock.acquire()
                 if self.debug:
                     print("Done navigating. Resetting events")
@@ -281,7 +287,8 @@ class iClicker_driver:
     def set_up_courses(self):
         for key, value in self.config[self.account_name]['Courses'].items():
             self.course_schedule.append(course_info(HourMinute.from_str(value['Start Time']),
-                                                    HourMinute.from_str(value['End Time']), value['Name']))
+                                                    HourMinute.from_str(value['End Time']), value['Name'],
+                                                    value.get('Longitude'), value.get('Latitude')))
         self.course_schedule.sort()
         now = HourMinute.utcnow()
         self.nextCourseIndex = len(self.course_schedule) - 1

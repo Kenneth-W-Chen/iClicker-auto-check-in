@@ -1,5 +1,6 @@
 from copy import deepcopy
 from datetime import datetime
+from typing import Union
 
 
 class HourMinute:
@@ -83,10 +84,12 @@ class HourMinute:
 
 
 class course_info:
-    def __init__(self, start_time: HourMinute, end_time: HourMinute, course: str):
+    def __init__(self, start_time: HourMinute, end_time: HourMinute, course: str, latitude: Union[float, None],
+                 longitude: Union[float, None]):
         self.start_time: HourMinute = deepcopy(start_time)
         self.end_time: HourMinute = deepcopy(end_time)
         self.course: str = deepcopy(course)
+        self.location = (False if latitude is None else latitude, False if longitude is None else longitude)
 
     def __eq__(self, other):
         if isinstance(other, self.__class__):

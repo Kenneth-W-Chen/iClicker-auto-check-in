@@ -105,8 +105,8 @@ class iClicker_driver:
         del self.driver.requests
         if self.auto_wait:
             self.start_wait()
-        self.wait_thread.join()
         self.time_lock.release()
+        self.wait_thread.join()
 
     def start_wait(self):
         if not self.wait_thread.is_alive():
@@ -120,6 +120,8 @@ class iClicker_driver:
                 if self.debug:
                     print('Waiting for join event...')
                 self.joinEvent.wait()
+                if self.debug:
+                    print('acquiring lock')
                 self.time_lock.acquire()
                 if self.joinUp:
                     break
@@ -253,10 +255,13 @@ class iClicker_driver:
             body = loads(response.body.decode())
             if self.joinUp:
                 if body['meetingId'] is None:
+                    print('ending join')
                     self.joinUp = False
                     # return
             elif body['meetingId'] is not None:
                 self.joinUp = True
+                if self.debug:
+                    print('joining')
                 self.joinEvent.set()
             elif response.status_code != 200:
                 if not (200 <= response.status_code <= 299):
